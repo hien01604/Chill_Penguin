@@ -4,8 +4,9 @@ public class Pipes : MonoBehaviour
 {
     public Transform top;
     public Transform bottom;
-    public float gap = 3f;
-    public float speed; // Tốc độ di chuyển của các ống
+    public float gap = 3f;  // Khoảng cách giữa phần trên và dưới của cột
+    public float speed;  // Tốc độ di chuyển của các ống (theo chiều ngang)
+    public float horizontalSpeed = 1f;  // Tốc độ di chuyển ngang của các ống
     public float moveSpeed = 1f;  // Tốc độ di chuyển lên/xuống của các ống
     public float moveRange = 3f;  // Khoảng cách tối đa mà các ống có thể di chuyển lên xuống
 
@@ -43,8 +44,8 @@ public class Pipes : MonoBehaviour
             speed = gameManager.pipeSpeed;
         }
 
-        // Di chuyển các ống sang trái
-        transform.position += Vector3.left * speed * Time.deltaTime;
+        // Di chuyển các ống sang trái (theo chiều X)
+        transform.position += Vector3.left * horizontalSpeed * Time.deltaTime;
 
         // Di chuyển các ống lên và xuống theo thời gian
         float newY = initialY + Mathf.Sin(Time.time * moveSpeed) * moveRange;

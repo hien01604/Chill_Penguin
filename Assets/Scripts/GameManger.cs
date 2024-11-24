@@ -47,8 +47,8 @@ public class GameManager : MonoBehaviour
 
     public void Pause()
     {
-        Time.timeScale = 0f;
-        player.enabled = false;
+        Time.timeScale = 0f;  // Dừng game
+        player.enabled = false;  // Tạm dừng player
     }
 
     public void Play()
@@ -60,16 +60,13 @@ public class GameManager : MonoBehaviour
         playButton.SetActive(false);
         gameOver.SetActive(false);
 
-        Time.timeScale = 1f;
-        player.enabled = true;
+        // Đảm bảo spawn pipes lại từ đầu
+        spawner.ResetSpawner();  // Gọi lại hàm reset spawn
 
-        Pipes[] pipes = FindObjectsOfType<Pipes>();
-
-        for (int i = 0; i < pipes.Length; i++)
-        {
-            Destroy(pipes[i].gameObject);
-        }
+        Time.timeScale = 1f;  // Tiếp tục game
+        player.enabled = true;  // Bật player lại
     }
+
 
     public void GameOver()
     {
@@ -95,9 +92,9 @@ public class GameManager : MonoBehaviour
     {
         level++;
 
-        // Increase pipe speed and decrease spawn rate as level goes up
-        pipeSpeed += 0.5f; // Tăng tốc độ của ống mỗi khi lên cấp
-        spawnRate = Mathf.Max(0.5f, spawnRate - 0.1f); // Giảm spawn rate mỗi khi lên cấp, không thấp hơn 0.5 giây
+        // Tăng tốc độ của ống và giảm spawn rate khi lên cấp
+        pipeSpeed = Mathf.Min(6f, pipeSpeed + 0.5f); // Đảm bảo tốc độ ống không quá nhanh
+        spawnRate = Mathf.Max(0.5f, spawnRate - 0.1f); // Giảm spawn rate nhưng không thấp hơn 0.5 giây
 
         Debug.Log("Level Up! New Level: " + level);
         Debug.Log("New Pipe Speed: " + pipeSpeed);

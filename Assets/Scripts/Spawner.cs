@@ -12,7 +12,7 @@ public class Spawner : MonoBehaviour
     private GameManager gameManager;
     private float lastSpawnXPosition = 0f;
 
-    private void Start()
+    private void Awake()
     {
         // Lấy tham chiếu đến GameManager
         gameManager = GameManager.Instance;
@@ -21,9 +21,12 @@ public class Spawner : MonoBehaviour
             Debug.LogError("GameManager is not assigned!");
             return;
         }
+    }
 
-        // Bắt đầu spawn pipes theo tốc độ spawnRate
-        InvokeRepeating(nameof(Spawn), gameManager.spawnRate, gameManager.spawnRate);
+    private void Start()
+    {
+        // Dừng việc spawn pipes khi chưa bắt đầu game
+        CancelInvoke(nameof(Spawn));
     }
 
     private void OnEnable()
@@ -53,8 +56,8 @@ public class Spawner : MonoBehaviour
         // Tạo một pipe mới
         Pipes pipes = Instantiate(prefab, transform.position, Quaternion.identity);
 
-        // Tính toán vị trí mới theo chiều ngang và dọc
-        lastSpawnXPosition += horizontalGap;  // Tăng khoảng cách giữa các pipe
+        // Tăng vị trí spawn của pipe theo hướng X
+        lastSpawnXPosition += horizontalGap;
         pipes.transform.position = new Vector3(lastSpawnXPosition, transform.position.y, 0f);
 
         // Điều chỉnh khoảng cách dọc (gap) giữa các phần trên và dưới của pipe
@@ -62,6 +65,24 @@ public class Spawner : MonoBehaviour
         pipes.gap = verticalGap;
 
         // Set the speed of the pipes based on the GameManager settings
-        pipes.speed = gameManager.pipeSpeed;
+        pipes.horizontalSpeed = gameManager.pipeSpeed;
+    }
+
+    // Phương thức reset lại spawn khi game bắt đầu lại
+    public void ResetSpawner()
+    {
+        // Hủy tất cả pipes hiện tại trong scene
+        Pipes[] pipes = FindObjectsOfType<Pipes>();
+        foreach (var pipe in pipes)
+        {
+            Destroy(pipe.gameObject);
+        }
+
+        // Reset lại vị trí spawn để bắt đầu lại từ đầu
+        lastSpawnXPosition = 0f;
+        CancelInvoke(nameof(Spawn));  // Hủy việc spawn cũ trước khi bắt đầu lại
+
+        // Bắt đầu lại quá trình spawn pipes
+        InvokeRepeating(nameof(Spawn), gameManager.spawnRate, gameManager.spawnRate);
     }
 }
