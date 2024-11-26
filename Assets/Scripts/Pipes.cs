@@ -2,59 +2,53 @@
 
 public class Pipes : MonoBehaviour
 {
-    public Transform top;
-    public Transform bottom;
-    public float gap = 3f;  // Khoảng cách giữa phần trên và dưới của cột
-    public float speed;  // Tốc độ di chuyển của các ống (theo chiều ngang)
-    public float horizontalSpeed = 1f;  // Tốc độ di chuyển ngang của các ống
-    public float moveSpeed = 1f;  // Tốc độ di chuyển lên/xuống của các ống
-    public float moveRange = 3f;  // Khoảng cách tối đa mà các ống có thể di chuyển lên xuống
+    public Transform top; // Top pipe
+    public Transform bottom; // Bottom pipe
+    public float horizontalSpeed = 2f; // Horizontal movement speed
+    public float verticalSpeed = 1f; // Vertical movement speed
+    public float verticalRange = 2f; // Range of vertical oscillation
+    private bool moveVertically = false; // Whether the pipe should move vertically
 
-    private float leftEdge;
-    private GameManager gameManager;  // Tham chiếu đến GameManager
-    private float initialY;  // Vị trí ban đầu của cột
+    private float initialY; // Initial Y position
 
     private void Start()
     {
-        // Lấy tham chiếu GameManager
-        gameManager = GameManager.Instance;
-        if (gameManager == null)
-        {
-            Debug.LogError("GameManager is not assigned!");
-            return;
-        }
-
-        // Lưu vị trí Y ban đầu của cột
-        initialY = transform.position.y;
-
-        // Đặt tốc độ di chuyển của ống từ GameManager
-        speed = gameManager.pipeSpeed;
-
-        // Tính toán vị trí ban đầu của các phần trên và dưới của ống
-        leftEdge = Camera.main.ScreenToWorldPoint(Vector3.zero).x - 1f;
-        top.position += Vector3.up * gap / 2;
-        bottom.position += Vector3.down * gap / 2;
+        initialY = transform.position.y; // Save the starting Y position
     }
 
     private void Update()
     {
-        // Cập nhật tốc độ của ống từ GameManager
-        if (gameManager != null)
-        {
-            speed = gameManager.pipeSpeed;
-        }
-
-        // Di chuyển các ống sang trái (theo chiều X)
+        // Horizontal movement
         transform.position += Vector3.left * horizontalSpeed * Time.deltaTime;
 
-        // Di chuyển các ống lên và xuống theo thời gian
-        float newY = initialY + Mathf.Sin(Time.time * moveSpeed) * moveRange;
-        transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+        // Vertical movement (if enabled)
+        if (moveVertically)
+        {
+            float newY = initialY + Mathf.Sin(Time.time * verticalSpeed) * verticalRange;
+            transform.position = new Vector3(transform.position.x, newY, transform.position.z);
+        }
 
-        // Kiểm tra và hủy ống khi chúng ra khỏi màn hình
-        if (transform.position.x < leftEdge)
+        // Destroy the pipe when it goes off-screen
+        if (transform.position.x < -10f) // Adjust based on your scene setup
         {
             Destroy(gameObject);
         }
+    }
+
+    public void SetGapSize(float gapSize)
+    {
+        // Adjust the gap between top and bottom pipes
+        top.position = new Vector3(top.position.x, top.position.y + gapSize / 2, top.position.z);
+        bottom.position = new Vector3(bottom.position.x, bottom.position.y - gapSize / 2, bottom.position.z);
+    }
+
+    public void SetHorizontalOnly()
+    {
+        moveVertically = false; // Disable vertical movement
+    }
+
+    public void SetHorizontalAndVertical()
+    {
+        moveVertically = true; // Enable vertical movement
     }
 }

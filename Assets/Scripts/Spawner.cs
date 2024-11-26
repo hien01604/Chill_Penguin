@@ -2,87 +2,63 @@
 
 public class Spawner : MonoBehaviour
 {
-    public Pipes prefab;
-    public float minHeight = 5f;
-    public float maxHeight = 8f;
-    public float verticalGap = 1f;
+    public Pipes prefab; // Pipe prefab
+    public float minHeight = 2f; // Minimum spawn height
+    public float maxHeight = 6f; // Maximum spawn height
+    public float spawnInterval = 3f; // Interval between pipe spawns
+    public float minGapSize = 2f; // Minimum gap size between pipes
+    public float maxGapSize = 4f; // Maximum gap size between pipes
 
-    public float horizontalGap = 6f; // Khoảng cách giữa các ống theo chiều ngang
+    private bool isSpawning = false; // Spawning state
+    private string currentMode; // Current game mode
 
-    private GameManager gameManager;
-    private float lastSpawnXPosition = 0f;
-
-    private void Awake()
+    public void EnableSpawning(string mode)
     {
-        // Lấy tham chiếu đến GameManager
-        gameManager = GameManager.Instance;
-        if (gameManager == null)
-        {
-            Debug.LogError("GameManager is not assigned!");
-            return;
-        }
+        currentMode = mode; // Set the game mode
+        isSpawning = true; // Enable spawning
+        InvokeRepeating(nameof(SpawnPipe), 0f, spawnInterval); // Start spawning pipes
     }
 
-    private void Start()
+    public void DisableSpawning()
     {
-        // Dừng việc spawn pipes khi chưa bắt đầu game
-        CancelInvoke(nameof(Spawn));
+        isSpawning = false; // Disable spawning
+        CancelInvoke(nameof(SpawnPipe)); // Stop spawning
     }
 
-    private void OnEnable()
-    {
-        if (gameManager == null)
-        {
-            gameManager = GameManager.Instance;
-            if (gameManager == null)
-            {
-                Debug.LogError("GameManager is not assigned!");
-                return;
-            }
-        }
-
-        // Bắt đầu spawn pipes khi vào chế độ chơi
-        InvokeRepeating(nameof(Spawn), gameManager.spawnRate, gameManager.spawnRate);
-    }
-
-    private void OnDisable()
-    {
-        // Dừng spawn khi không cần thiết
-        CancelInvoke(nameof(Spawn));
-    }
-
-    private void Spawn()
-    {
-        // Tạo một pipe mới
-        Pipes pipes = Instantiate(prefab, transform.position, Quaternion.identity);
-
-        // Tăng vị trí spawn của pipe theo hướng X
-        lastSpawnXPosition += horizontalGap;
-        pipes.transform.position = new Vector3(lastSpawnXPosition, transform.position.y, 0f);
-
-        // Điều chỉnh khoảng cách dọc (gap) giữa các phần trên và dưới của pipe
-        pipes.transform.position += Vector3.up * Random.Range(minHeight, maxHeight);
-        pipes.gap = verticalGap;
-
-        // Set the speed of the pipes based on the GameManager settings
-        pipes.horizontalSpeed = gameManager.pipeSpeed;
-    }
-
-    // Phương thức reset lại spawn khi game bắt đầu lại
     public void ResetSpawner()
     {
-        // Hủy tất cả pipes hiện tại trong scene
-        Pipes[] pipes = FindObjectsOfType<Pipes>();
-        foreach (var pipe in pipes)
+        foreach (Transform child in transform)
         {
-            Destroy(pipe.gameObject);
+            Destroy(child.gameObject); // Destroy all spawned pipes
+        }
+        CancelInvoke(nameof(SpawnPipe)); // Cancel any remaining invoke calls
+    }
+
+    private void SpawnPipe()
+    {
+        if (!isSpawning) return;
+
+        // Create a new pipe instance
+        Pipes newPipe = Instantiate(prefab, transform.position, Quaternion.identity);
+
+        // Randomize the pipe height
+        float randomHeight = Random.Range(minHeight, maxHeight);
+        newPipe.transform.position += Vector3.up * randomHeight;
+
+        // Randomize the gap size
+        float randomGapSize = Random.Range(minGapSize, maxGapSize);
+        newPipe.SetGapSize(randomGapSize);
+
+        // Adjust pipe behavior based on the selected mode
+        if (currentMode == "Normal")
+        {
+            newPipe.SetHorizontalOnly(); // Only horizontal movement
+        }
+        else if (currentMode == "Advanced")
+        {
+            newPipe.SetHorizontalAndVertical(); // Horizontal and vertical movement
         }
 
-        // Reset lại vị trí spawn để bắt đầu lại từ đầu
-        lastSpawnXPosition = 0f;
-        CancelInvoke(nameof(Spawn));  // Hủy việc spawn cũ trước khi bắt đầu lại
-
-        // Bắt đầu lại quá trình spawn pipes
-        InvokeRepeating(nameof(Spawn), gameManager.spawnRate, gameManager.spawnRate);
+        newPipe.transform.parent = transform; // Set the spawner as the parent
     }
 }

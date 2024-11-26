@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 [DefaultExecutionOrder(-1)]
 public class GameManager : MonoBehaviour
@@ -11,14 +12,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Spawner spawner;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private GameObject playButton;
-    [SerializeField] private GameObject gameOver;
+    [SerializeField] private GameObject menuButton;
+    [SerializeField] private GameObject highScoreButton;
 
     public int score { get; private set; } = 0;
-    public int level { get; private set; } = 1;
-    public float pipeSpeed { get; private set; } = 3f; // Tốc độ của ống
-    public float spawnRate { get; private set; } = 1f; // Tốc độ spawn ống
-
-    private int scoreToLevelUp = 10; // Mốc điểm để tăng độ khó
+    private string selectedMode;
 
     private void Awake()
     {
@@ -32,46 +30,48 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            Instance = null;
-        }
-    }
-
     private void Start()
     {
+        DebugCheckReferences(); // Check for null references at runtime
+
+        // Retrieve selected mode from PlayerPrefs
+        selectedMode = PlayerPrefs.GetString("GameMode", "Normal");
+        Debug.Log($"Selected Mode: {selectedMode}");
+
+        // Start the game paused
         Pause();
     }
 
     public void Pause()
     {
-        Time.timeScale = 0f;  // Dừng game
-        player.enabled = false;  // Tạm dừng player
+        Time.timeScale = 0f;
+        if (player != null) player.enabled = false; // Disable player controls
+        if (spawner != null) spawner.DisableSpawning(); // Stop spawning pipes
     }
 
     public void Play()
     {
+        DebugCheckReferences(); // Verify that all references are set
+
         score = 0;
-        level = 1;
         scoreText.text = score.ToString();
 
         playButton.SetActive(false);
-        gameOver.SetActive(false);
+        menuButton.SetActive(false);
+        highScoreButton.SetActive(false);
 
-        // Đảm bảo spawn pipes lại từ đầu
-        spawner.ResetSpawner();  // Gọi lại hàm reset spawn
+        if (spawner != null) spawner.ResetSpawner();
+        if (spawner != null) spawner.EnableSpawning(selectedMode); // Pass the selected mode to EnableSpawning()
 
-        Time.timeScale = 1f;  // Tiếp tục game
-        player.enabled = true;  // Bật player lại
+        Time.timeScale = 1f;
+        if (player != null) player.enabled = true; // Enable player controls
     }
-
 
     public void GameOver()
     {
         playButton.SetActive(true);
-        gameOver.SetActive(true);
+        menuButton.SetActive(true);
+        highScoreButton.SetActive(true);
 
         Pause();
     }
@@ -79,24 +79,41 @@ public class GameManager : MonoBehaviour
     public void IncreaseScore()
     {
         score++;
-        scoreText.text = score.ToString();
-
-        // Check if score has reached the threshold to level up
-        if (score >= scoreToLevelUp * level)
-        {
-            LevelUp();
-        }
+        if (scoreText != null)
+            scoreText.text = score.ToString();
     }
 
-    private void LevelUp()
+    public void GoToMenu()
     {
-        level++;
+        Time.timeScale = 1f; // Resume time scale
+        SceneManager.LoadScene(2); // Load the main menu scene
+    }
 
-        // Tăng tốc độ của ống và giảm spawn rate khi lên cấp
-        pipeSpeed = Mathf.Min(6f, pipeSpeed + 0.5f); // Đảm bảo tốc độ ống không quá nhanh
-        spawnRate = Mathf.Max(0.5f, spawnRate - 0.1f); // Giảm spawn rate nhưng không thấp hơn 0.5 giây
+    public void ViewHighScore()
+    {
+        Debug.Log("High Score Button Clicked");
+        // Replace with your high-score scene index or name
+        SceneManager.LoadScene("HighScoreScene");
+    }
 
-        Debug.Log("Level Up! New Level: " + level);
-        Debug.Log("New Pipe Speed: " + pipeSpeed);
+    private void DebugCheckReferences()
+    {
+        if (player == null)
+            Debug.LogError("Player is not assigned in GameManager!");
+
+        if (spawner == null)
+            Debug.LogError("Spawner is not assigned in GameManager!");
+
+        if (scoreText == null)
+            Debug.LogError("ScoreText (TextMeshPro) is not assigned in GameManager!");
+
+        if (playButton == null)
+            Debug.LogError("PlayButton is not assigned in GameManager!");
+
+        if (menuButton == null)
+            Debug.LogError("MenuButton is not assigned in GameManager!");
+
+        if (highScoreButton == null)
+            Debug.LogError("HighScoreButton is not assigned in GameManager!");
     }
 }
