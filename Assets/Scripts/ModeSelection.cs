@@ -25,4 +25,8 @@ public class ModeSelection : MonoBehaviour
         // Load the unified game scene (replace "3" with the actual scene name or index)
         SceneManager.LoadScene(3);
     }
+    public void Back()
+    {
+        SceneManager.LoadScene(1);
+    }
 }

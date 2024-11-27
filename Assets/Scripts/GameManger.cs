@@ -15,6 +15,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject menuButton;
     [SerializeField] private GameObject highScoreButton;
 
+    private HighscoreHandler highscoreHandler; // Declare HighscoreHandler reference
+
     public int score { get; private set; } = 0;
     private string selectedMode;
 
@@ -32,49 +34,106 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        DebugCheckReferences(); // Check for null references at runtime
+        DebugCheckReferences(); // Ensure all references are assigned
 
         // Retrieve selected mode from PlayerPrefs
         selectedMode = PlayerPrefs.GetString("GameMode", "Normal");
         Debug.Log($"Selected Mode: {selectedMode}");
 
-        // Start the game paused
+        // Pause the game initially
         Pause();
-    }
+
+        // Dynamically find HighscoreHandler if not assigned
+        highscoreHandler = FindObjectOfType<HighscoreHandler>();
+        if (highscoreHandler == null)
+        {
+            Debug.LogError("HighscoreHandler is not assigned in the scene!");
+        }
+        else
+        {
+            Debug.Log("HighscoreHandler successfully found in the scene.");
+        }
+    }   
 
     public void Pause()
     {
         Time.timeScale = 0f;
-        if (player != null) player.enabled = false; // Disable player controls
-        if (spawner != null) spawner.DisableSpawning(); // Stop spawning pipes
+        if (player != null) player.enabled = false; // Disable player movement
+        if (spawner != null) spawner.DisableSpawning(); // Stop pipe spawning
     }
 
     public void Play()
     {
-        DebugCheckReferences(); // Verify that all references are set
-
-        score = 0;
-        scoreText.text = score.ToString();
+        ResetGame(); // Add this to ensure the game resets properly
 
         playButton.SetActive(false);
         menuButton.SetActive(false);
         highScoreButton.SetActive(false);
 
-        if (spawner != null) spawner.ResetSpawner();
-        if (spawner != null) spawner.EnableSpawning(selectedMode); // Pass the selected mode to EnableSpawning()
+        if (spawner != null)
+        {
+            spawner.ResetSpawner(); // Reset spawner logic
+            spawner.EnableSpawning(selectedMode); // Enable spawning again
+        }
+
+        if (player != null)
+        {
+            player.ResetPlayer(); // Ensure the player is reset to initial state
+            player.enabled = true; // Re-enable player movement
+        }
 
         Time.timeScale = 1f;
-        if (player != null) player.enabled = true; // Enable player controls
+        Debug.Log("Game started!");
     }
+
+    private void ResetGame()
+    {
+        score = 0;
+        if (scoreText != null)
+        {
+            scoreText.text = score.ToString();
+        }
+
+        if (player != null)
+        {
+            player.ResetPlayer(); // Call ResetPlayer to reset the player state
+        }
+
+        if (spawner != null)
+        {
+            spawner.ResetSpawner(); // Reset spawner state
+        }
+
+        Time.timeScale = 10f;
+        Debug.Log("Game reset!");
+    }
+
+
 
     public void GameOver()
     {
+        HighscoreHandler highscoreHandler = FindObjectOfType<HighscoreHandler>();
+        if (highscoreHandler == null)
+        {
+            Debug.LogError("HighscoreHandler is not assigned in the scene!");
+            return;
+        }
+
+        string playerName = PlayerPrefs.GetString("PlayerName", "Unknown");
+        int currentScore = score;
+
+        highscoreHandler.AddHighscoreIfPossible(new HighscoreElement(playerName, currentScore));
+
+        Pause();
+
+        // Show game over UI
         playButton.SetActive(true);
         menuButton.SetActive(true);
         highScoreButton.SetActive(true);
 
-        Pause();
     }
+
+
 
     public void IncreaseScore()
     {
@@ -83,17 +142,22 @@ public class GameManager : MonoBehaviour
             scoreText.text = score.ToString();
     }
 
-    public void GoToMenu()
+    public void Mode()
     {
         Time.timeScale = 1f; // Resume time scale
         SceneManager.LoadScene(2); // Load the main menu scene
     }
+    public void Quit()
+    {
+        Time.timeScale = 1f; // Resume time scale
+        SceneManager.LoadScene(0); // Load the main menu scene
+    }
 
     public void ViewHighScore()
     {
+        Time.timeScale = 1f;
         Debug.Log("High Score Button Clicked");
-        // Replace with your high-score scene index or name
-        SceneManager.LoadScene("HighScoreScene");
+        SceneManager.LoadScene(4); // Navigate to high-score scene
     }
 
     private void DebugCheckReferences()

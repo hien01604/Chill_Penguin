@@ -34,6 +34,8 @@ public class InputName : MonoBehaviour
         {
             PlayerPrefs.SetString("PlayerName", input);
             Debug.Log("Player name saved: " + input);
+            PlayerPrefs.Save();
+
         }
     }
 
@@ -57,6 +59,7 @@ public class InputName : MonoBehaviour
         else
         {
             PlayerPrefs.SetString("PlayerName", nameInputField.text);
+            PlayerPrefs.Save();
             Debug.Log("Player name saved: " + nameInputField.text);
             SceneManager.LoadScene(2); // Load the next scene
         }

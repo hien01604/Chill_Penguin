@@ -31,10 +31,27 @@ public class Player : MonoBehaviour
         if (collision.CompareTag("Obstacle"))
         {
             GameManager.Instance.GameOver();
+            enabled = false;
         }
         else if (collision.CompareTag("Scoring"))
         {
             GameManager.Instance.IncreaseScore();
         }
     }
+    public void ResetPlayer()
+    {
+        // Reset the player's position to the starting position
+        transform.position = new Vector3(0, 0, 0); // Modify this to the desired starting position if needed
+
+        // Reset velocity to stop all movement
+        GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+
+        // Re-enable the player movement and controls
+        enabled = true;
+
+        // Optionally, reset animations or any player-specific states
+        Debug.Log("Player has been reset to initial state.");
+    }
+
+
 }

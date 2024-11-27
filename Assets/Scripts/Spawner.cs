@@ -27,12 +27,16 @@ public class Spawner : MonoBehaviour
 
     public void ResetSpawner()
     {
+        // Destroy all existing spawned objects
         foreach (Transform child in transform)
         {
-            Destroy(child.gameObject); // Destroy all spawned pipes
+            Destroy(child.gameObject);
         }
-        CancelInvoke(nameof(SpawnPipe)); // Cancel any remaining invoke calls
+
+        // Reset any internal counters or timers
+        StopAllCoroutines();
     }
+
 
     private void SpawnPipe()
     {
