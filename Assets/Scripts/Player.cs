@@ -2,15 +2,23 @@
 
 public class Player : MonoBehaviour
 {
-    public Sprite[] sprites;
-    public float jumpForce = 5f;
+    public Sprite[] sprites; // Sprites for the bird
+    public float jumpForce = 3f;
+    public AudioClip jumpSound; // Add a public variable for the jump sound
 
     private SpriteRenderer spriteRenderer;
     private Vector3 direction;
+    private AudioSource audioSource; // AudioSource component for playing sound
 
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+        audioSource = GetComponent<AudioSource>();
+
+        if (audioSource == null)
+        {
+            Debug.LogError("AudioSource component is missing on the Player object. Add it via the Inspector.");
+        }
     }
 
     private void Update()
@@ -19,6 +27,9 @@ public class Player : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
         {
             direction = Vector3.up * jumpForce;
+
+            // Play the jump sound
+            PlayJumpSound();
         }
 
         // Apply gravity
@@ -38,6 +49,7 @@ public class Player : MonoBehaviour
             GameManager.Instance.IncreaseScore();
         }
     }
+
     public void ResetPlayer()
     {
         // Reset the player's position to the starting position
@@ -53,5 +65,15 @@ public class Player : MonoBehaviour
         Debug.Log("Player has been reset to initial state.");
     }
 
-
+    private void PlayJumpSound()
+    {
+        if (audioSource != null && jumpSound != null)
+        {
+            audioSource.PlayOneShot(jumpSound); // Play the jump sound once
+        }
+        else
+        {
+            Debug.LogWarning("AudioSource or JumpSound is not assigned!");
+        }
+    }
 }
