@@ -7,26 +7,27 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+
+    // Audio
     public AudioSource musicAudioSource;
     public AudioClip musicClip;
     public AudioClip gameOverClip;
 
+    // Player, UI, and gameplay components
     [SerializeField] private Player player;
     [SerializeField] private Spawner spawner;
     [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI livesText; // Display lives on screen
     [SerializeField] private GameObject playButton;
     [SerializeField] private GameObject menuButton;
     [SerializeField] private GameObject highScoreButton;
     [SerializeField] private GameObject quitButton;
-    [SerializeField] private GameObject background;  // Thêm tham chiếu tới Image (background)
-    [SerializeField] private Color normalBackgroundColor;  // Màu nền bình thường
-    [SerializeField] private Color brightBackgroundColor;  // Màu nền sáng hơn khi đạt điểm
-    [SerializeField] private GameObject gameOverImage; // Add a reference to the Game Over image
+    [SerializeField] private GameObject gameOverImage; // Game Over image
 
-    private Renderer backgroundRenderer;
-    private HighscoreHandler highscoreHandler; // Declare HighscoreHandler reference
+    private HighscoreHandler highscoreHandler;
 
     public int score { get; private set; } = 0;
+    public int lives = 1; // Initial lives
     private string selectedMode;
 
     private void Awake()
@@ -43,30 +44,18 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Hide the Game Over image
-        if (gameOverImage != null)
-        {
-            gameOverImage.SetActive(false);
-        }
-        if (background != null)
-        {
-            backgroundRenderer = background.GetComponent<Renderer>();
-            // Đảm bảo rằng có một Renderer và bạn có thể thay đổi màu
-            if (backgroundRenderer != null)
-            {
-                backgroundRenderer.material.color = normalBackgroundColor;
-            }
-        }
-        DebugCheckReferences(); // Ensure all references are assigned
+        // Initialize UI
+        if (gameOverImage != null) gameOverImage.SetActive(false);
+        UpdateScoreText();
+        UpdateLivesText();
 
-        // Retrieve selected mode from PlayerPrefs
+        DebugCheckReferences();
+
         selectedMode = PlayerPrefs.GetString("GameMode", "Normal");
         Debug.Log($"Selected Mode: {selectedMode}");
 
-        // Pause the game initially
         Pause();
 
-        // Dynamically find HighscoreHandler if not assigned
         highscoreHandler = FindObjectOfType<HighscoreHandler>();
         if (highscoreHandler == null)
         {
@@ -81,13 +70,13 @@ public class GameManager : MonoBehaviour
     public void Pause()
     {
         Time.timeScale = 0f;
-        if (player != null) player.enabled = false; // Disable player movement
-        if (spawner != null) spawner.DisableSpawning(); // Stop pipe spawning
+        if (player != null) player.enabled = false;
+        if (spawner != null) spawner.DisableSpawning();
     }
 
     public void Play()
     {
-        ResetGame(); // Add this to ensure the game resets properly
+        ResetGame();
 
         playButton.SetActive(false);
         menuButton.SetActive(false);
@@ -96,14 +85,14 @@ public class GameManager : MonoBehaviour
 
         if (spawner != null)
         {
-            spawner.ResetSpawner(); // Reset spawner logic
-            spawner.EnableSpawning(selectedMode); // Enable spawning again
+            spawner.ResetSpawner();
+            spawner.EnableSpawning(selectedMode);
         }
 
         if (player != null)
         {
-            player.ResetPlayer(); // Ensure the player is reset to initial state
-            player.enabled = true; // Re-enable player movement
+            player.ResetPlayer();
+            player.enabled = true;
         }
 
         Time.timeScale = 1f;
@@ -113,131 +102,126 @@ public class GameManager : MonoBehaviour
     private void ResetGame()
     {
         score = 0;
-        if (scoreText != null)
-        {
-            scoreText.text = score.ToString();
-        }
+        lives = 3;
+        UpdateScoreText();
+        UpdateLivesText();
 
-        if (player != null)
-        {
-            player.ResetPlayer(); // Call ResetPlayer to reset the player state
-        }
+        if (player != null) player.ResetPlayer();
+        if (spawner != null) spawner.ResetSpawner();
 
-        if (spawner != null)
-        {
-            spawner.ResetSpawner(); // Reset spawner state
-        }
-        // Hide the Game Over image
-        if (gameOverImage != null)
-        {
-            gameOverImage.SetActive(false);
-        }
+        if (gameOverImage != null) gameOverImage.SetActive(false);
 
-        Time.timeScale = 10f;
+        Time.timeScale = 1f;
         Debug.Log("Game reset!");
     }
 
     public void GameOver()
     {
-        HighscoreHandler highscoreHandler = FindObjectOfType<HighscoreHandler>();
-        if (highscoreHandler == null)
+        if (highscoreHandler != null)
         {
-            Debug.LogError("HighscoreHandler is not assigned in the scene!");
-            return;
+            string playerName = PlayerPrefs.GetString("PlayerName", "Unknown");
+            int currentScore = score;
+            highscoreHandler.AddHighscoreIfPossible(new HighscoreElement(playerName, currentScore));
         }
-
-        string playerName = PlayerPrefs.GetString("PlayerName", "Unknown");
-        int currentScore = score;
-
-        highscoreHandler.AddHighscoreIfPossible(new HighscoreElement(playerName, currentScore));
 
         Pause();
 
-        // Show game over UI
+        if (gameOverImage != null) gameOverImage.SetActive(true);
         playButton.SetActive(true);
         menuButton.SetActive(true);
         highScoreButton.SetActive(true);
         quitButton.SetActive(true);
 
-        // Show the Game Over image
-        if (gameOverImage != null)
+        // Play game-over music
+        if (musicAudioSource != null && gameOverClip != null)
         {
-            gameOverImage.SetActive(true);
+            musicAudioSource.Stop();
+            musicAudioSource.clip = gameOverClip;
+            musicAudioSource.loop = false;
+            musicAudioSource.Play();
         }
-        // Call PlayMusic to switch to the game-over music
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayMusic(AudioManager.Instance.gameOverClip);
-        }   
     }
 
     public void IncreaseScore()
     {
         score++;
-        if (scoreText != null)
-            scoreText.text = score.ToString();
+        UpdateScoreText();
 
-        // Thay đổi màu nền khi điểm đạt 10
-        if (score >= 10)
+        if (score % 5 == 0)
         {
-            ChangeBackgroundColor();
+            lives++;
+            UpdateLivesText();
+            Debug.Log("Life gained! Lives: " + lives);
+        }
+    }
+
+    public void OnCollisionTrigger()
+    {
+        lives--;
+        UpdateLivesText();
+
+        if (lives > 0)
+        {
+            RespawnPlayer();
+        }
+        else
+        {
+            GameOver();
+        }
+    }
+
+    private void RespawnPlayer()
+    {
+        if (player != null)
+        {
+            player.ResetPlayer();
+            Debug.Log("Player respawned. Lives left: " + lives);
+        }
+    }
+
+    private void UpdateScoreText()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = score.ToString();
+        }
+    }
+
+    private void UpdateLivesText()
+    {
+        if (livesText != null)
+        {
+            livesText.text = lives.ToString();
         }
     }
 
     public void Mode()
     {
-        Time.timeScale = 1f; // Resume time scale
-        SceneManager.LoadScene(2); // Load the main menu scene
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(2);
     }
 
     public void Quit()
     {
-        Time.timeScale = 1f; // Resume time scale
-        SceneManager.LoadScene(0); // Load the main menu scene
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(0);
     }
 
     public void ViewHighScore()
     {
         Time.timeScale = 1f;
         Debug.Log("High Score Button Clicked");
-        SceneManager.LoadScene(4); // Navigate to high-score scene
-    }
-
-    private void ChangeBackgroundColor()
-    {
-        // Thay đổi màu nền khi điểm đạt 10
-        if (backgroundRenderer != null)
-        {
-            backgroundRenderer.material.color = brightBackgroundColor;
-        }
+        SceneManager.LoadScene(4);
     }
 
     private void DebugCheckReferences()
     {
-        if (player == null)
-            Debug.LogError("Player is not assigned in GameManager!");
-
-        if (spawner == null)
-            Debug.LogError("Spawner is not assigned in GameManager!");
-
-        if (scoreText == null)
-            Debug.LogError("ScoreText (TextMeshPro) is not assigned in GameManager!");
-
-        if (playButton == null)
-            Debug.LogError("PlayButton is not assigned in GameManager!");
-
-        if (menuButton == null)
-            Debug.LogError("MenuButton is not assigned in GameManager!");
-
-        if (highScoreButton == null)
-            Debug.LogError("HighScoreButton is not assigned in GameManager!");
-
-        if (background == null)
-            Debug.LogError("Background Image is not assigned in GameManager!");
-        if (background == null)
-            Debug.LogError("Background GameObject is not assigned in GameManager!");
-
-        if (scoreText == null)
-            Debug.LogError("ScoreText (TextMeshPro) is not assigned in GameManager!");
+        if (player == null) Debug.LogError("Player is not assigned in GameManager!");
+        if (spawner == null) Debug.LogError("Spawner is not assigned in GameManager!");
+        if (scoreText == null) Debug.LogError("ScoreText (TextMeshPro) is not assigned in GameManager!");
+        if (livesText == null) Debug.LogError("LivesText (TextMeshPro) is not assigned in GameManager!");
+        if (playButton == null) Debug.LogError("PlayButton is not assigned in GameManager!");
+        if (menuButton == null) Debug.LogError("MenuButton is not assigned in GameManager!");
+        if (highScoreButton == null) Debug.LogError("HighScoreButton is not assigned in GameManager!");
     }
 }

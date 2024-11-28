@@ -4,15 +4,18 @@ public class Player : MonoBehaviour
 {
     public Sprite[] sprites; // Sprites for the bird
     public float jumpForce = 3f;
-    public AudioClip jumpSound; // Add a public variable for the jump sound
+    public AudioClip jumpSound; // Jump sound
+    public AudioClip gameOverSound; // Game-over sound
 
     private SpriteRenderer spriteRenderer;
     private Vector3 direction;
-    private AudioSource audioSource; // AudioSource component for playing sound
+    private AudioSource audioSource; // AudioSource for playing sounds
+    private Rigidbody2D rb;
 
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+        rb = GetComponent<Rigidbody2D>();
         audioSource = GetComponent<AudioSource>();
 
         if (audioSource == null)
@@ -23,16 +26,28 @@ public class Player : MonoBehaviour
 
     private void Update()
     {
-        // Jump on input
+        // Handle jump input
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
         {
-            direction = Vector3.up * jumpForce;
-
-            // Play the jump sound
-            PlayJumpSound();
+            Jump();
         }
 
         // Apply gravity
+        ApplyGravity();
+    }
+
+    private void Jump()
+    {
+        direction = Vector3.up * jumpForce;
+
+        // Play the jump sound
+        PlayJumpSound();
+
+        // Optional: Add animation/sprite switching logic here
+    }
+
+    private void ApplyGravity()
+    {
         direction.y += Physics2D.gravity.y * Time.deltaTime;
         transform.position += direction * Time.deltaTime;
     }
@@ -41,27 +56,37 @@ public class Player : MonoBehaviour
     {
         if (collision.CompareTag("Obstacle"))
         {
-            GameManager.Instance.GameOver();
-            enabled = false;
+            // Handle collision with obstacle (reduce lives or game over)
+            GameManager.Instance.OnCollisionTrigger();
+
+            // Play game-over sound if lives reach zero
+            if (GameManager.Instance.lives <= 0)
+            {
+                PlayGameOverSound();
+                enabled = false; // Disable player control
+            }
         }
         else if (collision.CompareTag("Scoring"))
         {
+            // Increase score when passing scoring trigger
             GameManager.Instance.IncreaseScore();
         }
     }
 
     public void ResetPlayer()
     {
-        // Reset the player's position to the starting position
-        transform.position = new Vector3(0, 0, 0); // Modify this to the desired starting position if needed
+        // Reset position and velocity
+        transform.position = new Vector3(0, 0, 0); // Adjust to starting position if needed
+        direction = Vector3.zero;
+        if (rb != null)
+        {
+            rb.velocity = Vector2.zero;
+        }
 
-        // Reset velocity to stop all movement
-        GetComponent<Rigidbody2D>().velocity = Vector2.zero;
-
-        // Re-enable the player movement and controls
+        // Re-enable controls
         enabled = true;
 
-        // Optionally, reset animations or any player-specific states
+        // Optionally reset animations or states
         Debug.Log("Player has been reset to initial state.");
     }
 
@@ -69,11 +94,23 @@ public class Player : MonoBehaviour
     {
         if (audioSource != null && jumpSound != null)
         {
-            audioSource.PlayOneShot(jumpSound); // Play the jump sound once
+            audioSource.PlayOneShot(jumpSound); // Play jump sound
         }
         else
         {
-            Debug.LogWarning("AudioSource or JumpSound is not assigned!");
+            Debug.LogWarning("JumpSound or AudioSource is not assigned!");
+        }
+    }
+
+    private void PlayGameOverSound()
+    {
+        if (audioSource != null && gameOverSound != null)
+        {
+            audioSource.PlayOneShot(gameOverSound); // Play game-over sound
+        }
+        else
+        {
+            Debug.LogWarning("GameOverSound or AudioSource is not assigned!");
         }
     }
 }
