@@ -7,6 +7,9 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
+    public AudioSource musicAudioSource;
+    public AudioClip musicClip;
+    public AudioClip gameOverClip;
 
     [SerializeField] private Player player;
     [SerializeField] private Spawner spawner;
@@ -14,7 +17,13 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameObject playButton;
     [SerializeField] private GameObject menuButton;
     [SerializeField] private GameObject highScoreButton;
+    [SerializeField] private GameObject quitButton;
+    [SerializeField] private GameObject background;  // Thêm tham chiếu tới Image (background)
+    [SerializeField] private Color normalBackgroundColor;  // Màu nền bình thường
+    [SerializeField] private Color brightBackgroundColor;  // Màu nền sáng hơn khi đạt điểm
+    [SerializeField] private GameObject gameOverImage; // Add a reference to the Game Over image
 
+    private Renderer backgroundRenderer;
     private HighscoreHandler highscoreHandler; // Declare HighscoreHandler reference
 
     public int score { get; private set; } = 0;
@@ -34,6 +43,20 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        // Hide the Game Over image
+        if (gameOverImage != null)
+        {
+            gameOverImage.SetActive(false);
+        }
+        if (background != null)
+        {
+            backgroundRenderer = background.GetComponent<Renderer>();
+            // Đảm bảo rằng có một Renderer và bạn có thể thay đổi màu
+            if (backgroundRenderer != null)
+            {
+                backgroundRenderer.material.color = normalBackgroundColor;
+            }
+        }
         DebugCheckReferences(); // Ensure all references are assigned
 
         // Retrieve selected mode from PlayerPrefs
@@ -53,7 +76,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log("HighscoreHandler successfully found in the scene.");
         }
-    }   
+    }
 
     public void Pause()
     {
@@ -69,6 +92,7 @@ public class GameManager : MonoBehaviour
         playButton.SetActive(false);
         menuButton.SetActive(false);
         highScoreButton.SetActive(false);
+        quitButton.SetActive(false);
 
         if (spawner != null)
         {
@@ -103,12 +127,15 @@ public class GameManager : MonoBehaviour
         {
             spawner.ResetSpawner(); // Reset spawner state
         }
+        // Hide the Game Over image
+        if (gameOverImage != null)
+        {
+            gameOverImage.SetActive(false);
+        }
 
         Time.timeScale = 10f;
         Debug.Log("Game reset!");
     }
-
-
 
     public void GameOver()
     {
@@ -130,16 +157,31 @@ public class GameManager : MonoBehaviour
         playButton.SetActive(true);
         menuButton.SetActive(true);
         highScoreButton.SetActive(true);
+        quitButton.SetActive(true);
 
+        // Show the Game Over image
+        if (gameOverImage != null)
+        {
+            gameOverImage.SetActive(true);
+        }
+        // Call PlayMusic to switch to the game-over music
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayMusic(AudioManager.Instance.gameOverClip);
+        }   
     }
-
-
 
     public void IncreaseScore()
     {
         score++;
         if (scoreText != null)
             scoreText.text = score.ToString();
+
+        // Thay đổi màu nền khi điểm đạt 10
+        if (score >= 10)
+        {
+            ChangeBackgroundColor();
+        }
     }
 
     public void Mode()
@@ -147,6 +189,7 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f; // Resume time scale
         SceneManager.LoadScene(2); // Load the main menu scene
     }
+
     public void Quit()
     {
         Time.timeScale = 1f; // Resume time scale
@@ -158,6 +201,15 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1f;
         Debug.Log("High Score Button Clicked");
         SceneManager.LoadScene(4); // Navigate to high-score scene
+    }
+
+    private void ChangeBackgroundColor()
+    {
+        // Thay đổi màu nền khi điểm đạt 10
+        if (backgroundRenderer != null)
+        {
+            backgroundRenderer.material.color = brightBackgroundColor;
+        }
     }
 
     private void DebugCheckReferences()
@@ -179,5 +231,13 @@ public class GameManager : MonoBehaviour
 
         if (highScoreButton == null)
             Debug.LogError("HighScoreButton is not assigned in GameManager!");
+
+        if (background == null)
+            Debug.LogError("Background Image is not assigned in GameManager!");
+        if (background == null)
+            Debug.LogError("Background GameObject is not assigned in GameManager!");
+
+        if (scoreText == null)
+            Debug.LogError("ScoreText (TextMeshPro) is not assigned in GameManager!");
     }
 }
